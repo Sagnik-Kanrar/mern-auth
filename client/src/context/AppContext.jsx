@@ -8,17 +8,22 @@ export const AppContext = createContext()
 export const AppContextProvider = (props) => {
 
     const [isLoggedin, setIsLoggedin] = useState(false)
-    const [userData, setUserData] = useState(false)
+    const [userData, setUserData] = useState(null) // Changed from false to null for clarity
+
     const getUserData = useCallback(async () => {
         try {
             const {data} = await axios.get(`/api/users/getuser`)
             if(data.success){
                 setUserData(data.userData)
-            }else{
+            } else {
+                setUserData(null)
+                setIsLoggedin(false)
                 toast.error(data.message)
             }
-        } catch {
-            toast.error("Error fetching user data")
+        } catch (error) {
+            console.error('Error fetching user data:', error)
+            setUserData(null)
+            setIsLoggedin(false)
         }
     }, [])
 
@@ -28,14 +33,17 @@ export const AppContextProvider = (props) => {
             if(data.success){
                 setIsLoggedin(true)
                 getUserData()
+            } else {
+                setIsLoggedin(false)
+                setUserData(null)
             }
-        } catch {
-            // toast.error("Error fetching auth status")
+        } catch (error) {
+            setIsLoggedin(false)
+            setUserData(null)
         }
     }, [getUserData])
 
     useEffect(() => {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
         getAuthStatus();
     }, [getAuthStatus])
 

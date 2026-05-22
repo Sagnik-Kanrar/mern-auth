@@ -23,14 +23,23 @@ const allowedOrigins = [
 
 app.use(cookieParser());
 app.use(cors({
-  origin: allowedOrigins,
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps or curl)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      console.warn(`⚠️ CORS blocked for origin: ${origin}`);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true
 }));
 app.use(express.json());
 
 // Request logger
-app.use((req, req_res, next) => {
-  console.log(`${req.method} ${req.url}`);
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
   next();
 });
 
@@ -39,16 +48,26 @@ app.get('/', (req, res) => res.send('API WORKING'));
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 
-const startServer = async () => {
-  await connectDB();
-
-  app.listen(port, () => {
-    console.log(`Server is running on Port: ${port}`);
+// Global Error Handler
+app.use((err, req, res, next) => {
+  console.error('❌ Global Error:', err.stack);
+  res.status(500).json({
+    success: false,
+    message: err.message || 'Internal Server Error'
   });
+});
+
+const startServer = async () => {
+  try {
+    await connectDB();
+    app.listen(port, () => {
+      console.log(`🚀 Server is running on Port: ${port}`);
+    });
+  } catch (error) {
+    console.error('💀 Failed to start server:', error.message);
+    process.exit(1);
+  }
 };
 
-startServer().catch((error) => {
-  console.error('Failed to start server:', error.message);
-  process.exit(1);
-});
+startServer();
 

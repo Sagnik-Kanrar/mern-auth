@@ -8,20 +8,24 @@ export const register = async (req, res) => {
         const { name, email, password } = req.body;
 
         if (!name || !email || !password) {
-            return res.status(400).json({ success: false, message: 'All fields are required' });
+            return res.status(400).json({ success: false, message: 'All fields (name, email, password) are required' });
+        }
+
+        if (password.length < 6) {
+            return res.status(400).json({ success: false, message: 'Password must be at least 6 characters long' });
         }
 
         const existingUser = await userModel.findOne({ 
-            $or: [{ email }, { username: name }] 
+            $or: [{ email: email.toLowerCase() }, { username: name }] 
         });
 
         if (existingUser) {
-            const message = existingUser.email === email ? 'Email already in use' : 'Username already in use';
+            const message = existingUser.email === email.toLowerCase() ? 'Email already in use' : 'Username already in use';
             return res.status(400).json({ success: false, message });
         }
 
         const hashedPassword = await bcrypt.hash(password, 10);
-        const newUser = new userModel({ username: name, email, password: hashedPassword });
+        const newUser = new userModel({ username: name, email: email.toLowerCase(), password: hashedPassword });
         await newUser.save();
 
         const token = jwt.sign({ userId: newUser._id }, process.env.JWT_SECRET, { expiresIn: '7d' });
@@ -59,17 +63,17 @@ export const loginUser = async (req, res) => {
         const { email, password } = req.body;
 
         if (!email || !password) {
-            return res.status(400).json({ success: false, message: 'All fields are required' });
+            return res.status(400).json({ success: false, message: 'Email and password are required' });
         }
 
-        const user = await userModel.findOne({ email });
+        const user = await userModel.findOne({ email: email.toLowerCase() });
         if (!user) {
-            return res.status(400).json({ success: false, message: 'Invalid credentials' });
+            return res.status(401).json({ success: false, message: 'Invalid email or password' });
         }
 
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
-            return res.status(400).json({ success: false, message: 'Invalid credentials' });
+            return res.status(401).json({ success: false, message: 'Invalid email or password' });
         }
 
         const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '7d' });
@@ -125,12 +129,17 @@ export const sendVerifyEmail = async (req, res) => {
             text: `Hi ${user.username},\n\nYour OTP for account verification is: ${otp}\n\nThis OTP is valid for 10 minutes.\n\nBest regards,\nTeam ELLITE`
         };
 
-        await transporter.sendMail(mailOptions);
-        return res.status(200).json({ success: true, message: 'Verification email sent' });
+        try {
+            await transporter.sendMail(mailOptions);
+            return res.status(200).json({ success: true, message: 'Verification email sent' });
+        } catch (mailError) {
+            console.error('❌ Mail Sending Error:', mailError);
+            return res.status(500).json({ success: false, message: 'Failed to send verification email. Please try again later.' });
+        }
         
     } catch (error) {
-        console.error('Error sending verification email:', error);
-        return res.status(500).json({ success: false, message: error.message });
+        console.error('Error in sendVerifyEmail:', error);
+        return res.status(500).json({ success: false, message: 'Internal Server Error' });
     }
 };
 

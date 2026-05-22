@@ -60,7 +60,7 @@ const Navbar = () => {
         <div className="relative group">
           <div className="flex items-center gap-2 bg-slate-900/50 backdrop-blur-md border border-white/10 px-4 py-2 rounded-full hover:border-white/20 transition-all cursor-pointer group shadow-lg">
             <div className="w-8 h-8 flex items-center justify-center bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-full text-white font-bold text-sm shadow-inner ring-2 ring-white/10 group-hover:ring-white/30 transition-all">
-              {userData.username?.[0]?.toUpperCase()}
+              {userData?.username?.[0]?.toUpperCase() || '?'}
             </div>
             <span className="text-white text-sm font-medium hidden sm:block">
               {userData.username}

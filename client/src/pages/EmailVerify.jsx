@@ -15,13 +15,13 @@ const EmailVerify = () => {
 
   const handleInput = (e, index) => {
     const value = e.target.value;
-    if (value.length > 0 && index < 5) {
+    if (value.length > 0 && index < 5 && inputRefs.current[index + 1]) {
       inputRefs.current[index + 1].focus();
     }
   };
 
   const handleKeyDown = (e, index) => {
-    if (e.key === 'Backspace' && index > 0 && !e.target.value) {
+    if (e.key === 'Backspace' && index > 0 && !e.target.value && inputRefs.current[index - 1]) {
       inputRefs.current[index - 1].focus();
     }
   };
@@ -39,7 +39,9 @@ const EmailVerify = () => {
   const onSubmitHandler = async (e) => {
     try {
       e.preventDefault();
-      const otpArray = inputRefs.current.map(e => e.value);
+      const otpArray = inputRefs.current
+        .filter(ref => ref !== null)
+        .map(ref => ref.value);
       const otp = otpArray.join('');
       
       const { data } = await axios.post(`/api/auth/verify-account`, { otp });
